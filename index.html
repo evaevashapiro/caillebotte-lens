@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Caillebotte Lens</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1816;
+      font-family: Georgia, 'Times New Roman', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 60px 1.5rem 4rem;
+    }
+
+    .eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #a08c5b;
+      margin-bottom: 1.25rem;
+    }
+
+    .title {
+      font-size: 2.2rem;
+      font-weight: normal;
+      color: #f0ebe0;
+      margin-bottom: 80px;
+      text-align: center;
+    }
+
+    .painting-container {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .painting {
+      width: 100%;
+      display: block;
+      box-shadow: 0 0 0 1px #3a3530, 0 8px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .hotspot {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      background: rgba(245, 235, 220, 0.6);
+      box-shadow:
+        0 0 0 5px rgba(245, 235, 220, 0.1),
+        0 0 14px 2px rgba(245, 235, 220, 0.15);
+      border: none;
+      padding: 0;
+      transition: box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .hotspot:hover {
+      background: rgba(245, 235, 220, 0.85);
+      box-shadow:
+        0 0 0 7px rgba(245, 235, 220, 0.18),
+        0 0 22px 4px rgba(245, 235, 220, 0.3);
+    }
+
+    .hotspot.active {
+      background: rgba(212, 165, 116, 0.75);
+      box-shadow:
+        0 0 0 7px rgba(212, 165, 116, 0.18),
+        0 0 22px 4px rgba(212, 165, 116, 0.32);
+    }
+
+    .painting-hint {
+      width: 100%;
+      max-width: 720px;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      font-style: italic;
+      color: #52504c;
+      text-align: center;
+    }
+
+    /* ── Desktop annotation panel ───────────────────────────── */
+
+    .annotation-panel {
+      display: none;
+      width: 100%;
+      max-width: 720px;
+      margin-top: 1.25rem;
+      padding: 1.75rem 2rem;
+      background: #1f1b18;
+      border: 1px solid rgba(212, 165, 116, 0.18);
+    }
+
+    .annotation-panel.visible {
+      display: block;
+    }
+
+    .annotation-eyebrow {
+      font-size: 0.625rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #D4A574;
+      margin-bottom: 0.6rem;
+    }
+
+    .annotation-title {
+      font-size: 1.125rem;
+      font-weight: normal;
+      color: #f0ebe0;
+      margin-bottom: 0.9rem;
+    }
+
+    .annotation-body {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #c0b8ac;
+    }
+
+    /* ── Mobile dim overlay ─────────────────────────────────── */
+
+    #dim-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms ease-out;
+    }
+
+    #dim-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Mobile slide-up panel ──────────────────────────────── */
+
+    #mobile-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 45vh;
+      background: #231f1c;
+      border-top: 1px solid rgba(212, 165, 116, 0.28);
+      border-radius: 16px 16px 0 0;
+      z-index: 20;
+      padding: 1rem 1.5rem 2rem;
+      transform: translateY(100%);
+      transition: transform 300ms ease-out;
+      overflow-y: auto;
+    }
+
+    #mobile-panel.visible {
+      transform: translateY(0);
+    }
+
+    #mobile-panel-handle {
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 2px;
+      margin: 0 auto 1.25rem;
+    }
+
+    #mobile-panel-close {
+      position: absolute;
+      top: 0.9rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: rgba(240, 235, 224, 0.45);
+      font-size: 1.375rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 6px;
+      font-family: Georgia, 'Times New Roman', serif;
+      transition: color 0.15s ease;
+    }
+
+    #mobile-panel-close:hover {
+      color: rgba(240, 235, 224, 0.85);
+    }
+
+    /* Hide mobile elements on desktop */
+    @media (min-width: 768px) {
+      #dim-overlay,
+      #mobile-panel {
+        display: none;
+      }
+    }
+
+    /* ── Mobile overrides (below 768px) ─────────────────────── */
+
+    @media (max-width: 767px) {
+      body {
+        padding: 60px 1rem 4rem;
+      }
+
+      .eyebrow {
+        font-size: 0.5625rem;
+      }
+
+      .title {
+        font-size: 1.375rem;
+        margin-bottom: 40px;
+      }
+
+      .hotspot {
+        width: 28px;
+        height: 28px;
+      }
+
+      .annotation-panel {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <p class="eyebrow">The Caillebotte Lens</p>
+  <h1 class="title">Paris Street, Rainy Day &middot; 1877</h1>
+
+  <div class="painting-container">
+    <img class="painting" src="caillebotte.jpg" alt="Paris Street, Rainy Day — Gustave Caillebotte, 1877">
+    <button class="hotspot" style="left: 38%; top: 35%;" data-index="0" aria-label="Annotation: Haussmann's Paris"></button>
+    <button class="hotspot" style="left: 68%; top: 28%;" data-index="1" aria-label="Annotation: Consumer culture"></button>
+    <button class="hotspot" style="left: 65%; top: 75%;" data-index="2" aria-label="Annotation: Bourgeois subjects"></button>
+    <button class="hotspot" style="left: 26%; top: 45%;" data-index="3" aria-label="Annotation: Class observation"></button>
+    <button class="hotspot" style="left: 46%; top: 47%;" data-index="4" aria-label="Annotation: Formal rupture"></button>
+  </div>
+
+  <p class="painting-hint" id="painting-hint"></p>
+
+  <!-- Desktop annotation panel -->
+  <div class="annotation-panel" id="annotation-panel">
+    <p class="annotation-eyebrow" id="annotation-eyebrow"></p>
+    <h2 class="annotation-title" id="annotation-title"></h2>
+    <p class="annotation-body" id="annotation-body"></p>
+  </div>
+
+  <!-- Mobile dim overlay -->
+  <div id="dim-overlay"></div>
+
+  <!-- Mobile slide-up panel -->
+  <div id="mobile-panel">
+    <div id="mobile-panel-handle"></div>
+    <button id="mobile-panel-close" aria-label="Close annotation">&times;</button>
+    <p class="annotation-eyebrow" id="mobile-annotation-eyebrow"></p>
+    <h2 class="annotation-title" id="mobile-annotation-title"></h2>
+    <p class="annotation-body" id="mobile-annotation-body"></p>
+  </div>
+
+  <script>
+    const annotations = [
+      {
+        eyebrow: "Haussmann's Paris",
+        title: "The boulevard as organizing force",
+        body: "The wedge of the Place de Dublin is one of the new intersections cut into Paris under Baron Haussmann's 1853–1870 renovation, which leveled medieval quarters to drive wide, straight boulevards through the city. The new geometry was designed for circulation, sightlines, and military control. Caillebotte places it at the painting's vanishing point — not as backdrop, but as the structure that organizes everything else. The Paris in the painting is the Paris seen today."
+      },
+      {
+        eyebrow: "Consumer culture",
+        title: "The uniform of the modern crowd",
+        body: "The umbrella is a French invention, developed in early eighteenth-century Paris and mass-produced through the nineteenth century in regional centers like Aurillac and the Jura. By the 1870s it had become an essential fashion accessory, distributed through Le Bon Marché and the new department stores that were themselves emblems of consumer modernity. Caillebotte's crowd is unified less by class than by the object it carries. To hold an umbrella was to participate in the visual code of the modern city — a code that still circulates today, printed on umbrellas in museum gift shops."
+      },
+      {
+        eyebrow: "Bourgeois subjects",
+        title: "Correctly dressed",
+        body: `The woman is the picture of a correct Parisienne — half-veil, matched silk scarf, gloves — and the man a fashionable boulevardier in an open paletot. The word "correct" matters. To be correctly dressed in Haussmann's Paris was a matter of legibility: clothing told viewers and fellow pedestrians exactly what class the wearer belonged to and how they should be received. The painting's first audience walked through these intersections and owned these umbrellas. It did not show them an exotic world. It showed them their own.`
+      },
+      {
+        eyebrow: "Class observation",
+        title: "The figures who don't fit",
+        body: `The man and woman passing each other in front of the second building from the left are street merchants. Her shawl is tattered, her hemline uneven; his overcoat hangs too long beside the knee-length paletots the foreground men wear. They are not dressed "incorrectly" by accident — they fail the visual code because they stand outside it. Caillebotte places them, along with a domestic worker and a workman with a ladder, along the painting's horizon rather than its foreground. The other classes of modern Paris appear, but they line the edges. The painting acknowledges who else is on the street while making clear which class it was painted for.`
+      },
+      {
+        eyebrow: "Formal rupture",
+        title: "A pair of legs beneath an umbrella",
+        body: "Look beneath the foreground umbrella: a man has been reduced to a pair of legs. Cropping a figure this severely was a violation of academic painting, which trained Caillebotte to compose full, balanced bodies inside the frame. He breaks that rule on purpose, aligning himself with the Impressionists, who treated the canvas as a window onto life caught mid-motion rather than a stage for arranged compositions. The painting borrows the logic of the photograph: the frame is arbitrary, the figures pass through it, and the viewer is left with whatever happened to be there when the shutter clicked. The modern visual code makes everyone legible — and lets the painting forget who someone is."
+      }
+    ];
+
+    const hotspots       = document.querySelectorAll('.hotspot');
+    const desktopPanel   = document.getElementById('annotation-panel');
+    const desktopEyebrow = document.getElementById('annotation-eyebrow');
+    const desktopTitle   = document.getElementById('annotation-title');
+    const desktopBody    = document.getElementById('annotation-body');
+    const dimOverlay     = document.getElementById('dim-overlay');
+    const mobilePanel    = document.getElementById('mobile-panel');
+    const mobileClose    = document.getElementById('mobile-panel-close');
+    const mobileEyebrow  = document.getElementById('mobile-annotation-eyebrow');
+    const mobileTitle    = document.getElementById('mobile-annotation-title');
+    const mobileBody     = document.getElementById('mobile-annotation-body');
+    const hintEl         = document.getElementById('painting-hint');
+
+    let activeIndex = null;
+
+    function isMobile() {
+      return !window.matchMedia('(min-width: 768px)').matches;
+    }
+
+    function updateHint() {
+      hintEl.textContent = isMobile()
+        ? 'Tap a marker to read the annotation'
+        : 'Click a marker to read the annotation';
+    }
+    updateHint();
+    window.addEventListener('resize', updateHint);
+
+    function openMobilePanel(ann) {
+      mobileEyebrow.textContent = ann.eyebrow;
+      mobileTitle.textContent   = ann.title;
+      mobileBody.textContent    = ann.body;
+      dimOverlay.classList.add('visible');
+      mobilePanel.classList.add('visible');
+    }
+
+    function closeMobilePanel() {
+      dimOverlay.classList.remove('visible');
+      mobilePanel.classList.remove('visible');
+      hotspots.forEach(h => h.classList.remove('active'));
+      activeIndex = null;
+    }
+
+    hotspots.forEach((hotspot, i) => {
+      hotspot.addEventListener('click', () => {
+        if (isMobile()) {
+          hotspots.forEach(h => h.classList.remove('active'));
+          hotspot.classList.add('active');
+          activeIndex = i;
+          openMobilePanel(annotations[i]);
+        } else {
+          if (activeIndex === i) return;
+          hotspots.forEach(h => h.classList.remove('active'));
+          hotspot.classList.add('active');
+          activeIndex = i;
+          desktopEyebrow.textContent = annotations[i].eyebrow;
+          desktopTitle.textContent   = annotations[i].title;
+          desktopBody.textContent    = annotations[i].body;
+          desktopPanel.classList.add('visible');
+        }
+      });
+    });
+
+    mobileClose.addEventListener('click', closeMobilePanel);
+    dimOverlay.addEventListener('click', closeMobilePanel);
+
+    // Swipe-down to close
+    let touchStartY = 0;
+
+    mobilePanel.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    mobilePanel.addEventListener('touchend', (e) => {
+      if (e.changedTouches[0].clientY - touchStartY > 50) {
+        closeMobilePanel();
+      }
+    }, { passive: true });
+  </script>
+</body>
+</html>
